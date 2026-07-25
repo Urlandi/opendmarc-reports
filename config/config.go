@@ -13,11 +13,12 @@ import (
 
 	"net/http"
 
-	_ "github.com/go-sql-driver/mysql"
+	. "opendmarc-reports/logger"
+	"opendmarc-reports/tools"
+
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/viper"
-	. "github.com/nabbar/opendmarc-reports/logger"
-	"github.com/nabbar/opendmarc-reports/tools"
 	"gopkg.in/yaml.v2"
 )
 
@@ -38,11 +39,7 @@ limitations under the License.
 */
 
 const (
-	DEFAULT_DATABASE_HOST = "localhost"
-	DEFAULT_DATABASE_PORT = 3306
-	DEFAULT_DATABASE_NAME = "opendmarc"
-	DEFAULT_DATABASE_USER = "opendmarc"
-	DEFAULT_DATABASE_PASS = "opendmarc"
+	DEFAULT_DATABASE_FILE = "./opendmarc-reports.sqlite3"
 
 	DEFAULT_SMTP_HOST = "localhost"
 	DEFAULT_SMTP_PORT = 25
@@ -51,11 +48,11 @@ const (
 
 	DEFAULT_INTERVAL = "24h"
 
-	DEFAULT_DAT_PATH = "/var/tmp/"
+	//DEFAULT_DAT_PATH = "/var/tmp/"
 )
 
 func GetDefaultDSN() string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", DEFAULT_DATABASE_USER, DEFAULT_DATABASE_PASS, DEFAULT_DATABASE_HOST, DEFAULT_DATABASE_PORT, DEFAULT_DATABASE_NAME)
+	return fmt.Sprintf("file:%s", DEFAULT_DATABASE_FILE)
 }
 
 func GetDefaultSmtp() string {
@@ -68,10 +65,9 @@ type configModel struct {
 	NoUpdate bool `json:"noUpdate" yaml:"noUpdate" toml:"noUpdate"`
 	Day      bool `json:"yesterday" yaml:"yesterday" toml:"yesterday"`
 
-	Interval string `json:"interval" yaml:"interval" toml:"interval"`
-	Utc      bool   `json:"utc" yaml:"utc" toml:"utc"`
-	MysqlDSN string `json:"database" yaml:"database" toml:"database"`
-	SMTPUrl  string `json:"smtp" yaml:"smtp" toml:"smtp"`
+	Interval  string `json:"interval" yaml:"interval" toml:"interval"`
+	SqliteDSN string `json:"database" yaml:"database" toml:"database"`
+	SMTPUrl   string `json:"smtp" yaml:"smtp" toml:"smtp"`
 
 	Domain configDomain `json:"domain" yaml:"domain" toml:"domain"`
 	Report configReport `json:"report" yaml:"report" toml:"report"`
@@ -134,10 +130,9 @@ func loadConfig() {
 		NoUpdate: viper.GetBool("noUpdate"),
 		Day:      viper.GetBool("yesterday"),
 
-		Interval: formatInterval(viper.GetString("interval")),
-		Utc:      viper.GetBool("utc"),
-		MysqlDSN: viper.GetString("database"),
-		SMTPUrl:  viper.GetString("smtp"),
+		Interval:  formatInterval(viper.GetString("interval")),
+		SqliteDSN: viper.GetString("database"),
+		SMTPUrl:   viper.GetString("smtp"),
 
 		Domain: configDomain{
 			Only:    viper.GetStringSlice("domain.only"),
@@ -167,11 +162,11 @@ func (cnf *configModel) Connect() {
 	db := cnf.GetDatabase()
 	defer func() {
 		err := db.Close()
-		FatalLevel.LogErrorCtx(InfoLevel, "closing mysql database connection", err)
+		FatalLevel.LogErrorCtx(InfoLevel, "closing sqlite database connection", err)
 	}()
 
 	err := db.Ping()
-	FatalLevel.LogErrorCtx(DebugLevel, "Ping to mysql database", err)
+	FatalLevel.LogErrorCtx(DebugLevel, "Ping to sqlite database", err)
 
 	cnf.GetSMTP().Check()
 }
@@ -180,21 +175,21 @@ func (cnf configModel) JSON() []byte {
 	str, err := json.Marshal(cnf)
 	FatalLevel.LogErrorCtx(DebugLevel, "json encoding config", err)
 
-	return []byte(fmt.Sprintf("%s\n", string(str)))
+	return fmt.Appendf(nil, "%s\n", string(str))
 }
 
 func (cnf configModel) YAML() []byte {
 	str, err := yaml.Marshal(cnf)
 	FatalLevel.LogErrorCtx(DebugLevel, "yaml encoding config", err)
 
-	return []byte(fmt.Sprintf("---\n%s\n", string(str)))
+	return fmt.Appendf(nil, "---\n%s\n", string(str))
 }
 
 func (cnf configModel) TOML() []byte {
 	str, err := toml.Marshal(cnf)
 	FatalLevel.LogErrorCtx(DebugLevel, "toml encoding config", err)
 
-	return []byte(fmt.Sprintf("%s\n", string(str)))
+	return fmt.Appendf(nil, "%s\n", string(str))
 }
 
 func (cnf configModel) GetInterval() time.Duration {
@@ -236,25 +231,8 @@ func (cnf configModel) IsUpdate() bool {
 }
 
 func (cnf configModel) GetDatabase() *sql.DB {
-	if !strings.Contains(cnf.MysqlDSN, "parseTime=true") {
-		if strings.Contains(cnf.MysqlDSN, "?") {
-			cnf.MysqlDSN = cnf.MysqlDSN + "&parseTime=true"
-		} else {
-			cnf.MysqlDSN = cnf.MysqlDSN + "?parseTime=true"
-		}
-	}
-
-	db, err := sql.Open("mysql", cnf.MysqlDSN)
-	FatalLevel.LogErrorCtx(InfoLevel, "Connect to mysql database", err)
-
-	if cnf.Utc {
-		var (
-			err error
-		)
-
-		_, err = db.Exec("SET TIME_ZONE='+00:00'")
-		ErrorLevel.LogErrorCtx(InfoLevel, "setting UTC DB connection mode", err)
-	}
+	db, err := sql.Open("sqlite3", cnf.SqliteDSN)
+	FatalLevel.LogErrorCtx(InfoLevel, "Connect to sqlite database", err)
 
 	return db
 }

@@ -12,8 +12,8 @@ import (
 
 	"errors"
 
-	. "github.com/nabbar/opendmarc-reports/logger"
-	"github.com/nabbar/opendmarc-reports/report"
+	. "opendmarc-reports/logger"
+	"opendmarc-reports/report"
 )
 
 /*
@@ -54,22 +54,21 @@ func NewRequests(domain *Domain) *Requests {
 			table: table_requests,
 			fctField: func() FieldList {
 				return FieldList{
-					"id":      "int(11) NOT NULL AUTO_INCREMENT",
-					"date":    "timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP",
-					"domain":  "int(11) NOT NULL DEFAULT '0'",
-					"repuri":  "varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT ''",
-					"pct":     "tinyint(4) NOT NULL DEFAULT '0'",
-					"policy":  "tinyint(4) NOT NULL DEFAULT '0'",
-					"spolicy": "tinyint(4) NOT NULL DEFAULT '0'",
-					"aspf":    "tinyint(4) NOT NULL DEFAULT '0'",
-					"adkim":   "tinyint(4) NOT NULL DEFAULT '0'",
-					"locked":  "tinyint(4) NOT NULL DEFAULT '0'",
+					"id":      "INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT",
+					"date":    "datetime NOT NULL DEFAULT CURRENT_TIMESTAMP",
+					"domain":  "int NOT NULL DEFAULT '0'",
+					"repuri":  "TEXT NOT NULL DEFAULT ''",
+					"pct":     "tinyint NOT NULL DEFAULT '0'",
+					"policy":  "tinyint NOT NULL DEFAULT '0'",
+					"spolicy": "tinyint NOT NULL DEFAULT '0'",
+					"aspf":    "tinyint NOT NULL DEFAULT '0'",
+					"adkim":   "tinyint NOT NULL DEFAULT '0'",
+					"locked":  "tinyint NOT NULL DEFAULT '0'",
 				}
 			},
 			fctIndex: func() IndexList {
 				return IndexList{
-					"PRIMARY": {"type": "PRIMARY", "fields": "id"},
-					"domain":  {"type": "UNIQUE", "fields": "id,domain"},
+					"domain": {"type": "UNIQUE", "fields": "id,domain"},
 				}
 			},
 		},
@@ -105,9 +104,9 @@ func MakeDate(dateDay bool, dateInterval time.Duration) (dateFrom, dateTo int, e
 	)
 
 	if dateDay {
-		qry = "SELECT UNIXTIME(DATE_SUB(NOW(), INTERVAL 1 DAY)), UNIXTIME(NOW())"
+		qry = "SELECT UNIXEPOCH(DATETIME('NOW', '-1 DAY')), UNIXEPOCH()"
 	} else {
-		qry = "SELECT UNIXTIME(DATE_SUB(NOW(), INTERVAL ? SECOND)), UNIXTIME(NOW())"
+		qry = "SELECT UNIXEPOCH(DATETIME('NOW', '-? SECOND')), UNIXEPOCH()"
 		arg = []interface{}{dateInterval.Seconds()}
 	}
 
@@ -121,7 +120,7 @@ func MakeDate(dateDay bool, dateInterval time.Duration) (dateFrom, dateTo int, e
 
 	defer rows.Close()
 
-	for rows.Next() {
+	if rows.Next() {
 		if err = rows.Scan(&dateFrom, &dateTo); err != nil {
 			return
 		} else if err = rows.Err(); err != nil {
@@ -129,7 +128,6 @@ func MakeDate(dateDay bool, dateInterval time.Duration) (dateFrom, dateTo int, e
 		}
 
 		DebugLevel.Logf("Make Date for report : %d -> %d (Day Mode: %v, Interval: %s)", dateFrom, dateTo, dateDay, dateInterval.String())
-		break
 	}
 
 	if err = rows.Err(); err != nil {
@@ -140,7 +138,7 @@ func MakeDate(dateDay bool, dateInterval time.Duration) (dateFrom, dateTo int, e
 }
 
 func (obj *Requests) SetLocked() error {
-	res, err := GetDbCli().Exec(fmt.Sprintf("UPDATE `%s`", obj.table)+" SET `locked` = ? WHERE `id`=? LIMIT 1", 1, obj.Id)
+	res, err := GetDbCli().Exec(fmt.Sprintf("UPDATE `%s`", obj.table)+" SET `locked` = ? WHERE `id`=?", 1, obj.Id)
 
 	if err != nil {
 		return err
@@ -157,7 +155,7 @@ func (obj *Requests) SetLocked() error {
 }
 
 func (obj *Requests) SetUnLocked() error {
-	res, err := GetDbCli().Exec(fmt.Sprintf("UPDATE `%s`", obj.table)+" SET `locked` = ? WHERE `id`=? LIMIT 1", 0, obj.Id)
+	res, err := GetDbCli().Exec(fmt.Sprintf("UPDATE `%s`", obj.table)+" SET `locked` = ? WHERE `id`=?", 0, obj.Id)
 
 	if err != nil {
 		return err
@@ -203,7 +201,7 @@ func (obj *Requests) Load() error {
 
 	defer rows.Close()
 
-	for rows.Next() {
+	if rows.Next() {
 		var dom int
 
 		err = rows.Scan(
@@ -232,7 +230,6 @@ func (obj *Requests) Load() error {
 		}
 
 		DebugLevel.Logf("Find row into table %s : %s (id: %d)", obj.table, obj.Repuri, obj.Id)
-		break
 	}
 
 	if err = rows.Err(); err != nil {
@@ -358,7 +355,7 @@ func (obj *Requests) Update() error {
 
 	sql = sql + ", `locked` = ? "
 	arg = append(arg, obj.Locked, obj.Id)
-	res, err = GetDbCli().Exec(sql+" WHERE `id`=? LIMIT 1", arg...)
+	res, err = GetDbCli().Exec(sql+" WHERE `id`=?", arg...)
 
 	if err != nil {
 		return err

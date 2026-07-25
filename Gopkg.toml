@@ -21,7 +21,7 @@
 
 required = [
   "github.com/kennygrant/sanitize",
-  "github.com/go-sql-driver/mysql",
+  "github.com/mattn/go-sqlite3",
   "github.com/hashicorp/go-version",
   "github.com/mitchellh/go-homedir",
   "github.com/pelletier/go-toml",

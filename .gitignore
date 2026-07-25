@@ -8,3 +8,12 @@ vendor
 .vendor*
 
 BUILD_*
+
+.vscode
+
+go.sum
+go/
+opendmarc-reports
+build.sh
+*.sqlite3
+*.yaml

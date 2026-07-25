@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"sync"
 
+	"opendmarc-reports/config"
+	"opendmarc-reports/database"
+	. "opendmarc-reports/logger"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/nabbar/opendmarc-reports/config"
-	"github.com/nabbar/opendmarc-reports/database"
-	. "github.com/nabbar/opendmarc-reports/logger"
 )
 
 /*
@@ -31,7 +32,7 @@ var reportCmd = &cobra.Command{
 	Use:     "report",
 	Example: "report",
 	Short:   "Generate a report and send it",
-	Long: `Load OpenDMARC history data from mysql database, 
+	Long: `Load OpenDMARC history data from sqlite database, 
 generate report for selected domains or all domains, 
 and sent it by mail through SMTP server.
 `,

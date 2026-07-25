@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/nabbar/opendmarc-reports/logger"
-	"github.com/nabbar/opendmarc-reports/report"
+	"opendmarc-reports/logger"
+	"opendmarc-reports/report"
 )
 
 /*
@@ -42,16 +42,15 @@ func NewSignatures(Message *Messages) *Signatures {
 			table: table_signatures,
 			fctField: func() FieldList {
 				return FieldList{
-					"id":      "int(11) NOT NULL AUTO_INCREMENT",
-					"message": "int(11) NOT NULL DEFAULT '0'",
-					"domain":  "int(11) NOT NULL DEFAULT '0'",
-					"pass":    "tinyint(4) NOT NULL DEFAULT '0'",
-					"error":   "tinyint(4) NOT NULL DEFAULT '0'",
+					"id":      "INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT",
+					"message": "int NOT NULL DEFAULT '0'",
+					"domain":  "int NOT NULL DEFAULT '0'",
+					"pass":    "tinyint NOT NULL DEFAULT '0'",
+					"error":   "tinyint NOT NULL DEFAULT '0'",
 				}
 			},
 			fctIndex: func() IndexList {
 				return IndexList{
-					"PRIMARY": {"type": "PRIMARY", "fields": "id"},
 					"message": {"type": "UNIQUE", "fields": "id,message"},
 				}
 			},
@@ -119,13 +118,14 @@ func GetAllSignatures(Message *Messages) ([]*Signatures, error) {
 		}
 
 		if dom > 0 {
-			if dom == Message.FromDomain.Id {
+			switch dom {
+			case Message.FromDomain.Id:
 				obj.Domain = Message.FromDomain
-			} else if dom == Message.EnvDomain.Id {
+			case Message.EnvDomain.Id:
 				obj.Domain = Message.EnvDomain
-			} else if dom == Message.PolicyDomain.Id {
+			case Message.PolicyDomain.Id:
 				obj.Domain = Message.PolicyDomain
-			} else {
+			default:
 				obj.Domain, _ = GetDomain(dom)
 			}
 		}
@@ -174,7 +174,7 @@ func (obj *Signatures) Load() error {
 
 	defer rows.Close()
 
-	for rows.Next() {
+	if rows.Next() {
 		if err = rows.Scan(&obj.Id, &msg, &dom, &obj.Pass, &obj.Error); err != nil {
 			return err
 		} else if err = rows.Err(); err != nil {
@@ -182,9 +182,7 @@ func (obj *Signatures) Load() error {
 		}
 
 		if msg > 0 {
-			if obj.Message != nil && msg == obj.Message.Id {
-				obj.Message = obj.Message
-			} else {
+			if obj.Message == nil || msg != obj.Message.Id {
 				obj.Message, _ = GetMessages(msg)
 			}
 		}
@@ -193,13 +191,14 @@ func (obj *Signatures) Load() error {
 		}
 
 		if dom > 0 {
-			if dom == obj.Message.FromDomain.Id {
+			switch dom {
+			case obj.Message.FromDomain.Id:
 				obj.Domain = obj.Message.FromDomain
-			} else if dom == obj.Message.EnvDomain.Id {
+			case obj.Message.EnvDomain.Id:
 				obj.Domain = obj.Message.EnvDomain
-			} else if dom == obj.Message.PolicyDomain.Id {
+			case obj.Message.PolicyDomain.Id:
 				obj.Domain = obj.Message.PolicyDomain
-			} else {
+			default:
 				obj.Domain, _ = GetDomain(dom)
 			}
 		}
@@ -207,8 +206,8 @@ func (obj *Signatures) Load() error {
 			obj.Domain = NewDomain("")
 		}
 
-		logger.DebugLevel.Logf("Find row into table %s : %s (id: %d)", obj.table, obj.Message, obj.Id)
-		break
+		logger.DebugLevel.Logf("Find row into table %s : %+v (id: %d)",
+			obj.table, obj.Message, obj.Id)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -257,7 +256,8 @@ func (obj *Signatures) Save() error {
 		}
 
 		obj.Id = int(nbr)
-		logger.DebugLevel.Logf("Added %d row into table %s : %d (id: %d)", row, obj.table, obj.Message, obj.Id)
+		logger.DebugLevel.Logf("Added %d row into table %s : %+v (id: %d)",
+			row, obj.table, obj.Message, obj.Id)
 	}
 
 	return nil
@@ -293,7 +293,7 @@ func (obj *Signatures) Update() error {
 
 	sql = sql + ", `error` = ? "
 	arg = append(arg, obj.Error, obj.Id)
-	res, err = GetDbCli().Exec(sql+" WHERE `id`=? LIMIT 1", arg...)
+	res, err = GetDbCli().Exec(sql+" WHERE `id`=?", arg...)
 
 	if err != nil {
 		return err
@@ -306,7 +306,8 @@ func (obj *Signatures) Update() error {
 	}
 
 	if row != 0 {
-		logger.DebugLevel.Logf("Updated %d row into table %s : %d (id: %d)", row, obj.table, obj.Message, obj.Id)
+		logger.DebugLevel.Logf("Updated %d row into table %s : %+v (id: %d)",
+			row, obj.table, obj.Message, obj.Id)
 	}
 
 	return nil
@@ -323,7 +324,7 @@ func (obj *Signatures) Delete() error {
 		return fmt.Errorf("cannot delete an empty or not saved row into table %s", obj.table)
 	}
 
-	res, err = GetDbCli().Exec(fmt.Sprintf("DELETE FROM `%s` WHERE `id`=? LIMIT 1", obj.table), obj.Id)
+	res, err = GetDbCli().Exec(fmt.Sprintf("DELETE FROM `%s` WHERE `id`=?", obj.table), obj.Id)
 
 	if err != nil {
 		return err
@@ -336,7 +337,8 @@ func (obj *Signatures) Delete() error {
 	}
 
 	if row != 0 {
-		logger.DebugLevel.Logf("Deleted %d row into table %s : %d (id: %d)", row, obj.table, obj.Message, obj.Id)
+		logger.DebugLevel.Logf("Deleted %d row into table %s : %+v (id: %d)",
+			row, obj.table, obj.Message, obj.Id)
 	}
 
 	return nil

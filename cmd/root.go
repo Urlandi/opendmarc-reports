@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os"
 
+	"opendmarc-reports/config"
+	. "opendmarc-reports/logger"
+	"opendmarc-reports/version"
+
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/jwalterweatherman"
 	"github.com/spf13/viper"
-	"github.com/nabbar/opendmarc-reports/config"
-	. "github.com/nabbar/opendmarc-reports/logger"
-	"github.com/nabbar/opendmarc-reports/version"
 )
 
 /*
@@ -36,7 +37,6 @@ var (
 	flgTest     bool
 	flgNoUpd    bool
 	flgInterval string
-	flgUTC      bool
 	flgDay      bool
 	flgDomain   []string
 	flgNoDomain []string
@@ -56,8 +56,8 @@ var rootCmd = &cobra.Command{
 	Use:     version.Package,
 	Version: fmt.Sprintf("%s\n%s\n%s\n", version.GetAppId(), version.GetInfo(), version.GetAuthor()),
 	Short:   "Manage OpenDMARC report and history",
-	Long: `allow to import history file into mysql DB,
-generate report from this mysql DB normalized as OpenDMARC reports
+	Long: `allow to import history file into sqlite DB,
+generate report from this sqlite DB normalized as OpenDMARC reports
 and send them to MX server of each reports'domains'`,
 	TraverseChildren: true,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -81,18 +81,17 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.opendmarc.[yaml|json|toml])")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.opendmarc-reports.[yaml|json|toml])")
 
 	rootCmd.PersistentFlags().CountVarP(&flgVerbose, "verbose", "v", "Enable verbose mode (multi allowed v, vv, vvv)")
 	rootCmd.PersistentFlags().BoolVarP(&flgTest, "test", "t", false, "Don't send reports")
 	rootCmd.PersistentFlags().BoolVarP(&flgNoUpd, "no-update", "u", false, "Don't record report transmission")
 	rootCmd.PersistentFlags().StringVarP(&flgInterval, "interval", "i", config.DEFAULT_INTERVAL, "Report interval duration")
-	rootCmd.PersistentFlags().BoolVarP(&flgUTC, "utc", "z", false, "Operate in UTC")
 	rootCmd.PersistentFlags().BoolVarP(&flgDay, "day", "y", true, "Send report for yesterday's data")
 	rootCmd.PersistentFlags().StringSliceVarP(&flgDomain, "domain", "m", make([]string, 0), "Force a report for named domain list (multiple flag allowed)")
 	rootCmd.PersistentFlags().StringSliceVarP(&flgNoDomain, "no-domain", "e", make([]string, 0), "Omit a report for named domain list (multiple flag allowed)")
 
-	rootCmd.PersistentFlags().StringVarP(&flgDBDSN, "database", "d", config.GetDefaultDSN(), "Mysql Database params formatted as DSN string: <user>:<password>@protocol(<host>:<port>|<socket path>)/<database>[?[params[=value]]]")
+	rootCmd.PersistentFlags().StringVarP(&flgDBDSN, "database", "d", config.GetDefaultDSN(), "Sqlite Database params formatted as DSN string: file:<filename>[?[params[=value]]]")
 	rootCmd.PersistentFlags().StringVarP(&flgSMTP, "smtp", "s", config.GetDefaultSmtp(), "SMTP server params formatted as DSN string: <user>:<password>@tcp(<host|ip>:<port>)/[none|tls|starttls][?[serverName|skiptlsverify]=<value>]")
 
 	rootCmd.PersistentFlags().StringVar(&flgReportEmail, "report-email", "", "Report email sender")
@@ -105,7 +104,6 @@ func init() {
 	viper.BindPFlag("yesterday", rootCmd.PersistentFlags().Lookup("day"))
 
 	viper.BindPFlag("interval", rootCmd.PersistentFlags().Lookup("interval"))
-	viper.BindPFlag("utc", rootCmd.PersistentFlags().Lookup("utc"))
 	viper.BindPFlag("database", rootCmd.PersistentFlags().Lookup("database"))
 	viper.BindPFlag("smtp", rootCmd.PersistentFlags().Lookup("smtp"))
 

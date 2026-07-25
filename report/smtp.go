@@ -10,10 +10,10 @@ import (
 
 	"net/smtp"
 
-	"github.com/nabbar/opendmarc-reports/config"
-	. "github.com/nabbar/opendmarc-reports/logger"
-	"github.com/nabbar/opendmarc-reports/tools"
-	"github.com/nabbar/opendmarc-reports/version"
+	"opendmarc-reports/config"
+	. "opendmarc-reports/logger"
+	"opendmarc-reports/tools"
+	"opendmarc-reports/version"
 )
 
 /*
@@ -179,7 +179,7 @@ func writeHeader(w io.WriteCloser, head, value string) {
 		PanicLevel.LogErrorCtxf(DebugLevel, "writing header '%s: %s' to writer", errors.New("empty writer"), head, value)
 	}
 
-	_, err := w.Write([]byte(fmt.Sprintf("%s: %s\r\n", head, value)))
+	_, err := fmt.Fprintf(w, "%s: %s\r\n", head, value)
 	PanicLevel.LogErrorCtxf(DebugLevel, "writing header '%s: %s' to writer", err, head, value)
 }
 

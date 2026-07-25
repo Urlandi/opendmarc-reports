@@ -10,9 +10,10 @@ import (
 	"path"
 	"strings"
 
+	"opendmarc-reports/config/certificates"
+	. "opendmarc-reports/logger"
+
 	"github.com/secsy/goftp"
-	"github.com/nabbar/opendmarc-reports/config/certificates"
-	. "github.com/nabbar/opendmarc-reports/logger"
 )
 
 /*

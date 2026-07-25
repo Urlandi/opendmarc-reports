@@ -8,8 +8,8 @@ import (
 
 	"strings"
 
-	"github.com/nabbar/opendmarc-reports/config"
-	. "github.com/nabbar/opendmarc-reports/logger"
+	"opendmarc-reports/config"
+	. "opendmarc-reports/logger"
 )
 
 /*
@@ -19,7 +19,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -71,11 +71,7 @@ func (fld IndexList) Join() string {
 			fl = append(fl, fmt.Sprintf("`%s`", v))
 		}
 
-		if t == "PRIMARY" {
-			res = append(res, fmt.Sprintf("%s KEY (%s)", t, strings.Join(fl, ",")))
-		} else {
-			res = append(res, fmt.Sprintf("%s KEY `%s` (%s)", t, k, strings.Join(fl, ",")))
-		}
+		res = append(res, fmt.Sprintf("%s (%s)", t, strings.Join(fl, ",")))
 	}
 
 	return strings.Join(res, ",")
@@ -92,8 +88,7 @@ type Generic struct {
 }
 
 var (
-	useUTC = false
-	dbcli  *sql.DB
+	dbcli *sql.DB
 )
 
 func GetDbCli() *sql.DB {
@@ -108,7 +103,7 @@ func GetDbCli() *sql.DB {
 func Close() {
 	if dbcli != nil {
 		err := dbcli.Close()
-		FatalLevel.LogErrorCtx(InfoLevel, "closing mysql database connection", err)
+		FatalLevel.LogErrorCtx(InfoLevel, "closing sqlite database connection", err)
 		dbcli = nil
 	}
 }
@@ -140,7 +135,7 @@ func CheckTables() {
 }
 
 func (gen Generic) CheckTable() error {
-	if rows, err := GetDbCli().Query(fmt.Sprintf("SHOW TABLES LIKE '%s'", gen.table)); err != nil {
+	if rows, err := GetDbCli().Query(fmt.Sprintf("SELECT name FROM sqlite_schema WHERE type='table' AND name LIKE '%s'", gen.table)); err != nil {
 		return err
 	} else if err = rows.Err(); err != nil {
 		return err
@@ -166,8 +161,11 @@ func (gen Generic) CheckTable() error {
 		row int64
 		err error
 	)
-
-	qry := fmt.Sprintf("CREATE TABLE `%s`(%s,%s) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci", gen.table, gen.fctField().Join(), gen.fctIndex().Join())
+	qry := fmt.Sprintf("CREATE TABLE `%s`(%s", gen.table, gen.fctField().Join())
+	if gen.fctIndex != nil {
+		qry = qry + fmt.Sprintf(", %s", gen.fctIndex().Join())
+	}
+	qry = qry + ")"
 
 	if res, err = GetDbCli().Exec(qry); err != nil {
 		return err
@@ -202,14 +200,12 @@ func (gen *Generic) Load() error {
 
 	defer rows.Close()
 
-	for rows.Next() {
+	if rows.Next() {
 		if err = rows.Scan(&gen.Id, &gen.Name, &gen.Date); err != nil {
 			return err
 		} else if err = rows.Err(); err != nil {
 			return err
 		}
-
-		break
 	}
 
 	if err = rows.Err(); err != nil {
@@ -289,7 +285,7 @@ func (gen *Generic) Update() error {
 		gen.Date = time.Now()
 	}
 
-	res, err = GetDbCli().Exec(fmt.Sprintf("UPDATE `%s` SET `name`=?, `date`=? WHERE `id`=? LIMIT 1", gen.table), gen.Name, gen.Date, gen.Id)
+	res, err = GetDbCli().Exec(fmt.Sprintf("UPDATE `%s` SET `name`=?, `date`=? WHERE `id`=?", gen.table), gen.Name, gen.Date, gen.Id)
 
 	if err != nil {
 		return err
@@ -319,7 +315,7 @@ func (gen *Generic) Delete() error {
 		return fmt.Errorf("cannot delete an empty or not saved row into table %s", gen.table)
 	}
 
-	res, err = GetDbCli().Exec(fmt.Sprintf("DELETE FROM `%s` WHERE `id`=? LIMIT 1", gen.table), gen.Id)
+	res, err = GetDbCli().Exec(fmt.Sprintf("DELETE FROM `%s` WHERE `id`=?", gen.table), gen.Id)
 
 	if err != nil {
 		return err

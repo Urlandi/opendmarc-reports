@@ -58,8 +58,8 @@ cd ${GOPATH}/src/github.com/nabbar/opendmarc-reports
 Basicly running the tools without config file or params will show : 
 
 ```shell
-allow to import history file into mysql DB,
-generate report from this mysql DB normalized as OpenDMARC reports
+allow to import history file into sqlite3 DB,
+generate report from this sqlite3 DB normalized as OpenDMARC reports
 and send them to MX server of each reports'domains'
 
 Usage:
@@ -72,8 +72,8 @@ Available Commands:
   report      Generate a report and send it
 
 Flags:
-  -c, --config string         config file (default is $HOME/.opendmarc.[yaml|json|toml])
-  -d, --database string       Mysql Database params formatted as DSN string: <user>:<password>@protocol(<host>:<port>|<socket path>)/<database>[?[params[=value]]] (default "opendmarc:opendmarc@tcp(localhost:3306)/opendmarc")
+  -c, --config string         config file (default is $HOME/.opendmarc-reports.[yaml|json|toml])
+  -d, --database string       Sqlite Database params formatted as DSN string: file:<filename>[?[params[=value]]] (default "file:./opendmarc-reports.sqlite3")
   -y, --day                   Send report for yesterday's data (default true)
   -m, --domain strings        Force a report for named domain list (multiple flag allowed)
   -h, --help                  help for opendmarc-reports
@@ -85,7 +85,6 @@ Flags:
       --report-org string     Report organisation sender
   -s, --smtp string           SMTP server params formatted as DSN string: <user>:<password>@tcp(<host|ip>:<port>)/[none|tls|starttls][?[serverName|skiptlsverify]=<value>] (default "postmaster@localdomain:opendmarc@tcp(localhost:25)/tls")
   -t, --test                  Don't send reports
-  -z, --utc                   Operate in UTC
   -v, --verbose count         Enable verbose mode (multi allowed v, vv, vvv)
       --version               version for opendmarc-reports
 
@@ -118,8 +117,8 @@ Flags:
   -h, --help   help for config
 
 Global Flags:
-  -c, --config string         config file (default is $HOME/.opendmarc.[yaml|json|toml])
-  -d, --database string       Mysql Database params formatted as DSN string: <user>:<password>@protocol(<host>:<port>|<socket path>)/<database>[?[params[=value]]] (default "opendmarc:opendmarc@tcp(localhost:3306)/opendmarc")
+  -c, --config string         config file (default is $HOME/.opendmarc-reports.[yaml|json|toml])
+  -d, --database string       Sqlite Database params formatted as DSN string: file:<filename>[?[params[=value]]] (default "file:./opendmarc-reports.sqlite3")
   -y, --day                   Send report for yesterday's data (default true)
   -m, --domain strings        Force a report for named domain list (multiple flag allowed)
   -i, --interval string       Report interval duration (default "24h")
@@ -130,16 +129,15 @@ Global Flags:
       --report-org string     Report organisation sender
   -s, --smtp string           SMTP server params formatted as DSN string: <user>:<password>@tcp(<host|ip>:<port>)/[none|tls|starttls][?[serverName|skiptlsverify]=<value>] (default "postmaster@localdomain:opendmarc@tcp(localhost:25)/tls")
   -t, --test                  Don't send reports
-  -z, --utc                   Operate in UTC
   -v, --verbose count         Enable verbose mode (multi allowed v, vv, vvv)
 
 ```
 
 When generated you can use this config as default config by specify -c if not in the default path and default name.
 The great interest of this file is to store your credentials but still allow you to override any config the current run without saving this overrides.
-As the for example to use defautl config but for this run use UTC date/time, you can run a command like this :
+As the for example to use defautl config but for this run in test mode, you can run a command like this :
 ```shell
-opendmarc-reports <command> -c <path to no default config path> --utc <args...>
+opendmarc-reports <command> -c <path to no default config path> -t
 ```
 
 Once generated, you can modify the config file as you want or calling again the config command to overwrite your file with other default config
@@ -152,7 +150,7 @@ the help of this command will show :
 
 ```shell
 Import OpenDMARC history file
-into mysql database. If not exist create
+into sqlite database. If not exist create
 the record else update it.
 
 Usage:
@@ -165,8 +163,8 @@ Flags:
   -h, --help   help for import
 
 Global Flags:
-  -c, --config string         config file (default is $HOME/.opendmarc.[yaml|json|toml])
-  -d, --database string       Mysql Database params formatted as DSN string: <user>:<password>@protocol(<host>:<port>|<socket path>)/<database>[?[params[=value]]] (default "opendmarc:opendmarc@tcp(localhost:3306)/opendmarc")
+  -c, --config string         config file (default is $HOME/.opendmarc-reports.[yaml|json|toml])
+  -d, --database string       Sqlite Database params formatted as DSN string: file:<filename>[?[params[=value]]] (default "file:./opendmarc-reports.sqlite3")
   -y, --day                   Send report for yesterday's data (default true)
   -m, --domain strings        Force a report for named domain list (multiple flag allowed)
   -i, --interval string       Report interval duration (default "24h")
@@ -177,7 +175,6 @@ Global Flags:
       --report-org string     Report organisation sender
   -s, --smtp string           SMTP server params formatted as DSN string: <user>:<password>@tcp(<host|ip>:<port>)/[none|tls|starttls][?[serverName|skiptlsverify]=<value>] (default "postmaster@localdomain:opendmarc@tcp(localhost:25)/tls")
   -t, --test                  Don't send reports
-  -z, --utc                   Operate in UTC
   -v, --verbose count         Enable verbose mode (multi allowed v, vv, vvv)
 
 ```
@@ -195,7 +192,7 @@ In your SMTP server, if you have a DKIM signature process the generated mail wil
 the help for the report command is :
 
 ```shell
-Load OpenDMARC history data from mysql database,
+Load OpenDMARC history data from sqlite database,
 generate report for selected domains or all domains,
 and sent it by mail through SMTP server.
 
@@ -209,8 +206,8 @@ Flags:
   -h, --help   help for report
 
 Global Flags:
-  -c, --config string         config file (default is $HOME/.opendmarc.[yaml|json|toml])
-  -d, --database string       Mysql Database params formatted as DSN string: <user>:<password>@protocol(<host>:<port>|<socket path>)/<database>[?[params[=value]]] (default "opendmarc:opendmarc@tcp(localhost:3306)/opendmarc")
+  -c, --config string         config file (default is $HOME/.opendmarc-reports.[yaml|json|toml])
+  -d, --database string       Sqlite Database params formatted as DSN string: file:<filename>[?[params[=value]]] (default "file:./opendmarc-reports.sqlite")
   -y, --day                   Send report for yesterday's data (default true)
   -m, --domain strings        Force a report for named domain list (multiple flag allowed)
   -i, --interval string       Report interval duration (default "24h")
@@ -221,7 +218,6 @@ Global Flags:
       --report-org string     Report organisation sender
   -s, --smtp string           SMTP server params formatted as DSN string: <user>:<password>@tcp(<host|ip>:<port>)/[none|tls|starttls][?[serverName|skiptlsverify]=<value>] (default "postmaster@localdomain:opendmarc@tcp(localhost:25)/tls")
   -t, --test                  Don't send reports
-  -z, --utc                   Operate in UTC
   -v, --verbose count         Enable verbose mode (multi allowed v, vv, vvv)
 ```
 

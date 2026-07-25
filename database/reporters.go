@@ -28,15 +28,9 @@ func NewReporters(Name string) *Reporters {
 			table: table_reporters,
 			fctField: func() FieldList {
 				return FieldList{
-					"id":   "int(11) NOT NULL AUTO_INCREMENT",
-					"name": "varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT ''",
-					"date": "timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP",
-				}
-			},
-			fctIndex: func() IndexList {
-				return IndexList{
-					"PRIMARY": {"type": "PRIMARY", "fields": "id"},
-					"name":    {"type": "UNIQUE", "fields": "name"},
+					"id":   "INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT",
+					"name": "TEXT NOT NULL DEFAULT '' UNIQUE",
+					"date": "datetime NOT NULL DEFAULT CURRENT_TIMESTAMP",
 				}
 			},
 		},

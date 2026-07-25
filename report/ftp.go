@@ -1,8 +1,8 @@
 package report
 
 import (
-	"github.com/nabbar/opendmarc-reports/config"
-	. "github.com/nabbar/opendmarc-reports/logger"
+	"opendmarc-reports/config"
+	. "opendmarc-reports/logger"
 )
 
 /*

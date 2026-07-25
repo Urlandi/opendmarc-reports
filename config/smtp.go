@@ -15,9 +15,8 @@ import (
 	"net/url"
 	"strconv"
 
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/nabbar/opendmarc-reports/config/certificates"
-	. "github.com/nabbar/opendmarc-reports/logger"
+	"opendmarc-reports/config/certificates"
+	. "opendmarc-reports/logger"
 )
 
 /*
@@ -345,7 +344,8 @@ func (cnf smtpClient) GetSMTPUrl() string {
 	params := val.Encode()
 
 	if len(params) > 2 {
-		buf.WriteString("?" + params)
+		buf.WriteString("?")
+		buf.WriteString(params)
 	}
 
 	return buf.String()

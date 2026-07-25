@@ -21,7 +21,7 @@ import (
 	"crypto/x509"
 	"strings"
 
-	. "github.com/nabbar/opendmarc-reports/logger"
+	. "opendmarc-reports/logger"
 )
 
 func CheckCertificates() bool {

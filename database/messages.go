@@ -10,9 +10,9 @@ import (
 
 	"strconv"
 
-	. "github.com/nabbar/opendmarc-reports/logger"
-	"github.com/nabbar/opendmarc-reports/report"
-	"github.com/nabbar/opendmarc-reports/tools"
+	. "opendmarc-reports/logger"
+	"opendmarc-reports/report"
+	"opendmarc-reports/tools"
 )
 
 /*
@@ -61,29 +61,28 @@ func NewMessages(JobId string) *Messages {
 			table: table_messages,
 			fctField: func() FieldList {
 				return FieldList{
-					"id":            "int(11) NOT NULL AUTO_INCREMENT",
-					"date":          "timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP",
-					"jobid":         "varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT ''",
-					"reporter":      "int(10) unsigned NOT NULL DEFAULT '0'",
-					"ip":            "int(10) unsigned NOT NULL DEFAULT '0'",
-					"policy":        "tinyint(3) unsigned NOT NULL DEFAULT '0'",
-					"disp":          "tinyint(3) unsigned NOT NULL DEFAULT '0'",
-					"from_domain":   "int(10) unsigned NOT NULL DEFAULT '0'",
-					"env_domain":    "int(10) unsigned NOT NULL DEFAULT '0'",
-					"policy_domain": "int(10) unsigned NOT NULL DEFAULT '0'",
-					"sigcount":      "tinyint(3) unsigned NOT NULL DEFAULT '0'",
-					"spf":           "tinyint(3) unsigned NOT NULL DEFAULT '0'",
-					"align_spf":     "tinyint(3) unsigned NOT NULL DEFAULT '0'",
-					"align_dkim":    "tinyint(3) unsigned NOT NULL DEFAULT '0'",
-					"request_id":    "int(10) unsigned NOT NULL DEFAULT '0'",
-					"sent":          "tinyint(1) unsigned NOT NULL DEFAULT '0'",
+					"id":            "INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT",
+					"date":          "datetime NOT NULL DEFAULT CURRENT_TIMESTAMP",
+					"jobid":         "TEXT NOT NULL DEFAULT ''",
+					"reporter":      "int unsigned NOT NULL DEFAULT '0'",
+					"ip":            "int unsigned NOT NULL DEFAULT '0'",
+					"policy":        "tinyint unsigned NOT NULL DEFAULT '0'",
+					"disp":          "tinyint unsigned NOT NULL DEFAULT '0'",
+					"from_domain":   "int unsigned NOT NULL DEFAULT '0'",
+					"env_domain":    "int unsigned NOT NULL DEFAULT '0'",
+					"policy_domain": "int unsigned NOT NULL DEFAULT '0'",
+					"sigcount":      "tinyint unsigned NOT NULL DEFAULT '0'",
+					"spf":           "tinyint unsigned NOT NULL DEFAULT '0'",
+					"align_spf":     "tinyint unsigned NOT NULL DEFAULT '0'",
+					"align_dkim":    "tinyint unsigned NOT NULL DEFAULT '0'",
+					"request_id":    "int unsigned NOT NULL DEFAULT '0'",
+					"sent":          "tinyint unsigned NOT NULL DEFAULT '0'",
 				}
 			},
 			fctIndex: func() IndexList {
 				return IndexList{
-					"PRIMARY": {"type": "PRIMARY", "fields": "id"},
-					"jobid":   {"type": "UNIQUE", "fields": "id,jobid"},
-					"sent":    {"type": "UNIQUE", "fields": "id,date,from_domain,request_id,sent"},
+					"jobid": {"type": "UNIQUE", "fields": "id,jobid"},
+					"sent":  {"type": "UNIQUE", "fields": "id,date,from_domain,request_id,sent"},
 				}
 			},
 		},
@@ -119,9 +118,9 @@ func GetAllMessages(request *Requests, sent, dateMode bool, dateInterval time.Du
 	arg := []interface{}{request.Id, sent}
 
 	if dateMode {
-		qry = qry + " WHERE `request_id`=? AND `sent`=? AND DATE(`date`) < DATE(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY))"
+		qry = qry + " WHERE `request_id`=? AND `sent`=? AND DATE(`date`) < DATE('NOW', '-1 DAY')"
 	} else {
-		qry = qry + " WHERE `request_id`=? AND `sent`=? AND `date` < DATE_SUB(NOW(), INTERVAL ? SECOND)"
+		qry = qry + " WHERE `request_id`=? AND `sent`=? AND `date` < DATETIME('NOW', '-? SECOND')"
 		arg = append(arg, dateInterval.Seconds())
 	}
 
@@ -157,13 +156,13 @@ func GetAllMessages(request *Requests, sent, dateMode bool, dateInterval time.Du
 func GetRangeDate(request *Requests, sent, dateMode bool, dateInterval time.Duration) (dateMin, dateMax int, err error) {
 	var rows *sql.Rows
 
-	qry := fmt.Sprintf("SELECT UNIX_TIMESTAMP(MIN(`date`)), UNIX_TIMESTAMP(MAX(`date`)) FROM `%s`", table_messages)
+	qry := fmt.Sprintf("SELECT UNIXEPOCH(MIN(`date`)), UNIXEPOCH(MAX(`date`)) FROM `%s`", table_messages)
 	arg := []interface{}{request.Id, sent}
 
 	if dateMode {
-		qry = qry + " WHERE `request_id`=? AND `sent`=? AND DATE(`date`) < DATE(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY))"
+		qry = qry + " WHERE `request_id`=? AND `sent`=? AND DATE(`date`) < DATE('NOW', '-1 DAY')"
 	} else {
-		qry = qry + " WHERE `request_id`=? AND `sent`=? AND `date` < DATE_SUB(NOW(), INTERVAL ? SECOND)"
+		qry = qry + " WHERE `request_id`=? AND `sent`=? AND `date` < DATETIME('NOW', '-? SECOND')"
 		arg = append(arg, dateInterval.Seconds())
 	}
 
@@ -175,7 +174,7 @@ func GetRangeDate(request *Requests, sent, dateMode bool, dateInterval time.Dura
 
 	defer rows.Close()
 
-	for rows.Next() {
+	if rows.Next() {
 		if err = rows.Scan(&dateMin, &dateMax); err != nil {
 			return
 		} else if err = rows.Err(); err != nil {
@@ -201,9 +200,9 @@ func GetDomainList(sent, dateMode bool, dateInterval time.Duration) (domainIds [
 	arg := []interface{}{sent}
 
 	if dateMode {
-		qry = qry + " WHERE `sent`=? AND DATE(`date`) < DATE(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY))"
+		qry = qry + " WHERE `sent`=? AND DATE(`date`) < DATE('NOW', '-1 DAY')"
 	} else {
-		qry = qry + " WHERE `sent`=? AND `date` < DATE_SUB(NOW(), INTERVAL ? SECOND)"
+		qry = qry + " WHERE `sent`=? AND `date` < DATETIME('NOW', '-? SECOND')"
 		arg = append(arg, dateInterval.Seconds())
 	}
 
@@ -242,9 +241,9 @@ func GetRequestList(domain *Domain, sent, dateMode bool, dateInterval time.Durat
 	arg := []interface{}{domain.Id, sent}
 
 	if dateMode {
-		qry = qry + " WHERE `from_domain`=? AND `sent`=? AND DATE(`date`) < DATE(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY))"
+		qry = qry + " WHERE `from_domain`=? AND `sent`=? AND DATE(`date`) < DATE('NOW', '-1 DAY')"
 	} else {
-		qry = qry + " WHERE `from_domain`=? AND `sent`=? AND `date` < DATE_SUB(NOW(), INTERVAL ? SECOND)"
+		qry = qry + " WHERE `from_domain`=? AND `sent`=? AND `date` < DATETIME('NOW', '-? SECOND')"
 		arg = append(arg, dateInterval.Seconds())
 	}
 
@@ -343,11 +342,12 @@ func (obj *Messages) parseRow(row *sql.Rows) error {
 	}
 
 	if pol > 0 {
-		if pol == obj.FromDomain.Id {
+		switch pol {
+		case obj.FromDomain.Id:
 			obj.PolicyDomain = obj.FromDomain
-		} else if pol == obj.EnvDomain.Id {
+		case obj.EnvDomain.Id:
 			obj.PolicyDomain = obj.EnvDomain
-		} else {
+		default:
 			obj.PolicyDomain, _ = GetDomain(pol)
 		}
 	}
@@ -385,13 +385,12 @@ func (obj *Messages) Load() error {
 
 	defer rows.Close()
 
-	for rows.Next() {
+	if rows.Next() {
 		if err = obj.parseRow(rows); err != nil {
 			return err
 		} else if err = rows.Err(); err != nil {
 			return err
 		}
-		break
 	}
 
 	if err = rows.Err(); err != nil {
@@ -417,7 +416,7 @@ func (obj *Messages) SetSent(Sent bool) error {
 	}
 
 	obj.Sent = Sent
-	res, err = GetDbCli().Exec(fmt.Sprintf("UPDATE `%s` SET `sent` = ?", obj.table)+" WHERE `id`=? LIMIT 1", obj.Sent, obj.Id)
+	res, err = GetDbCli().Exec(fmt.Sprintf("UPDATE `%s` SET `sent` = ?", obj.table)+" WHERE `id`=?", obj.Sent, obj.Id)
 
 	if err != nil {
 		return err
@@ -743,7 +742,7 @@ func (obj *Messages) Update() error {
 	arg = append(arg, obj.Sent)
 
 	arg = append(arg, obj.Id)
-	res, err = GetDbCli().Exec(sql+" WHERE `id`=? LIMIT 1", arg...)
+	res, err = GetDbCli().Exec(sql+" WHERE `id`=?", arg...)
 
 	if err != nil {
 		return err

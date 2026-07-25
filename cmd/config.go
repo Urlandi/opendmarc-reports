@@ -17,9 +17,10 @@ package cmd
 import (
 	"errors"
 
+	"opendmarc-reports/logger"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/nabbar/opendmarc-reports/logger"
 )
 
 // configCmd represents the config command

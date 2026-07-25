@@ -17,9 +17,10 @@ import (
 
 	"sync"
 
+	. "opendmarc-reports/logger"
+	"opendmarc-reports/tools"
+
 	"github.com/kennygrant/sanitize"
-	. "github.com/nabbar/opendmarc-reports/logger"
-	"github.com/nabbar/opendmarc-reports/tools"
 )
 
 /*

@@ -8,8 +8,9 @@ import (
 
 	"strings"
 
+	. "opendmarc-reports/logger"
+
 	govers "github.com/hashicorp/go-version"
-	. "github.com/nabbar/opendmarc-reports/logger"
 )
 
 /*

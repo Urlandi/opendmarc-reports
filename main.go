@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/nabbar/opendmarc-reports/cmd"
-	"github.com/nabbar/opendmarc-reports/database"
+	"opendmarc-reports/cmd"
+	"opendmarc-reports/database"
 )
 
 /*

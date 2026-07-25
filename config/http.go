@@ -3,15 +3,15 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/nabbar/opendmarc-reports/config/certificates"
-	. "github.com/nabbar/opendmarc-reports/logger"
+	"opendmarc-reports/config/certificates"
+	. "opendmarc-reports/logger"
 )
 
 /*
@@ -112,7 +112,7 @@ func (obj *httpClient) checkResponse(res *http.Response) (bool, *bytes.Buffer) {
 	var buf *bytes.Buffer
 
 	if res.Body != nil {
-		bdy, err := ioutil.ReadAll(res.Body)
+		bdy, err := io.ReadAll(res.Body)
 		if err != nil {
 			buf.Write(bdy)
 		}

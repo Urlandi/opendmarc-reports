@@ -14,12 +14,13 @@ import (
 
 	"sync"
 
+	"opendmarc-reports/config"
+	"opendmarc-reports/database"
+	. "opendmarc-reports/logger"
+	"opendmarc-reports/tools"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/nabbar/opendmarc-reports/config"
-	"github.com/nabbar/opendmarc-reports/database"
-	. "github.com/nabbar/opendmarc-reports/logger"
-	"github.com/nabbar/opendmarc-reports/tools"
 	"gopkg.in/yaml.v2"
 )
 
@@ -45,7 +46,7 @@ var importCmd = &cobra.Command{
 	Example: "import /var/tmp/dmarc.dat /var/tmp/opendmarc.*",
 	Short:   "Import dat history file",
 	Long: `Import OpenDMARC history file
-into mysql database. If not exist create 
+into sqlite database. If not exist create 
 the record else update it.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -226,12 +227,12 @@ func parseFile(wg *sync.WaitGroup, nbr, sub int, filepath string) {
 
 		case "dkim":
 			sig := database.NewSignatures(nil)
-			d := strings.SplitN(p[1], " ", 2)
+			d := strings.SplitN(p[1], " ", 3)
 			sig.Domain = database.NewDomain(d[0])
 			err = sig.Domain.Load()
 			WarnLevel.LogErrorCtx(DebugLevel, fmt.Sprintf("loading value 'dkim domain' for job '%s'", j.JobId), err)
 
-			if val, err = strconv.ParseInt(d[1], 10, 64); err != nil {
+			if val, err = strconv.ParseInt(d[2], 10, 64); err != nil {
 				WarnLevel.LogErrorCtx(NilLevel, fmt.Sprintf("converting value 'dkim result' for job '%s'", j.JobId), err)
 				sig.Pass = 5
 			} else {
@@ -318,7 +319,9 @@ func parseFile(wg *sync.WaitGroup, nbr, sub int, filepath string) {
 			} else {
 				j.SPF = int(val)
 			}
-
+		case "arc":
+		case "arc_policy":
+			// Silent ignore
 		default:
 			ErrorLevel.LogErrorCtx(NilLevel, fmt.Sprintf("reading file '%s'", filepath), fmt.Errorf("key '%s' not understand", p[0]))
 		}
@@ -351,7 +354,7 @@ func (job *jobItem) SaveJob() {
 	}
 
 	var ids = make([]int, 0)
-	for k, _ := range job.signature {
+	for k := range job.signature {
 		if job.signature[k] == nil {
 			continue
 		}
