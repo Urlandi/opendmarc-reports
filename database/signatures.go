@@ -29,11 +29,12 @@ const table_signatures = "signatures"
 type Signatures struct {
 	Generic
 
-	Id      int
-	Message *Messages
-	Domain  *Domain
-	Pass    int
-	Error   bool
+	Id       int
+	Message  *Messages
+	Domain   *Domain
+	Selector *Selector
+	Pass     int
+	Error    bool
 }
 
 func NewSignatures(Message *Messages) *Signatures {
@@ -42,11 +43,12 @@ func NewSignatures(Message *Messages) *Signatures {
 			table: table_signatures,
 			fctField: func() FieldList {
 				return FieldList{
-					"id":      "INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT",
-					"message": "int NOT NULL DEFAULT '0'",
-					"domain":  "int NOT NULL DEFAULT '0'",
-					"pass":    "tinyint NOT NULL DEFAULT '0'",
-					"error":   "tinyint NOT NULL DEFAULT '0'",
+					"id":       "INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT",
+					"message":  "int NOT NULL DEFAULT '0'",
+					"domain":   "int NOT NULL DEFAULT '0'",
+					"selector": "int NOT NULL DEFAULT '0'",
+					"pass":     "tinyint NOT NULL DEFAULT '0'",
+					"error":    "tinyint NOT NULL DEFAULT '0'",
 				}
 			},
 			fctIndex: func() IndexList {
@@ -84,7 +86,7 @@ func GetAllSignatures(Message *Messages) ([]*Signatures, error) {
 		err  error
 	)
 
-	sql := fmt.Sprintf("SELECT `id`,`message`,`domain`,`pass`,`error` FROM `%s`", table_signatures)
+	sql := fmt.Sprintf("SELECT `id`,`message`,`domain`,`selector`,`pass`,`error` FROM `%s`", table_signatures)
 	rows, err = GetDbCli().Query(sql+" WHERE `message`=?", Message.Id)
 
 	if err != nil {
@@ -98,9 +100,10 @@ func GetAllSignatures(Message *Messages) ([]*Signatures, error) {
 	for rows.Next() {
 		obj := NewSignatures(Message)
 		dom := 0
+		sel := 0
 		msg := 0
 
-		if err = rows.Scan(&obj.Id, &msg, &dom, &obj.Pass, &obj.Error); err != nil {
+		if err = rows.Scan(&obj.Id, &msg, &dom, &sel, &obj.Pass, &obj.Error); err != nil {
 			return res, err
 		} else if err = rows.Err(); err != nil {
 			return res, err
@@ -133,6 +136,13 @@ func GetAllSignatures(Message *Messages) ([]*Signatures, error) {
 			obj.Domain = NewDomain("")
 		}
 
+		if sel > 0 {
+			obj.Selector, _ = GetSelector(sel)
+		}
+		if obj.Selector == nil {
+			obj.Selector = NewSelector("")
+		}
+
 		logger.DebugLevel.Logf("Find row into table %s : Job ref %s (id: %d)", obj.table, obj.Message.JobId, obj.Id)
 		res = append(res, obj)
 	}
@@ -153,10 +163,11 @@ func (obj *Signatures) Load() error {
 		rows *sql.Rows
 		err  error
 		dom  int
+		sel  int
 		msg  int
 	)
 
-	sql := fmt.Sprintf("SELECT `id`,`message`,`domain`,`pass`,`error` FROM `%s`", obj.table)
+	sql := fmt.Sprintf("SELECT `id`,`message`,`domain`,`selector`,`pass`,`error` FROM `%s`", obj.table)
 
 	if obj.Id != 0 {
 		rows, err = GetDbCli().Query(sql+" WHERE `id`=? LIMIT 1", obj.Id)
@@ -175,7 +186,7 @@ func (obj *Signatures) Load() error {
 	defer rows.Close()
 
 	if rows.Next() {
-		if err = rows.Scan(&obj.Id, &msg, &dom, &obj.Pass, &obj.Error); err != nil {
+		if err = rows.Scan(&obj.Id, &msg, &dom, &sel, &obj.Pass, &obj.Error); err != nil {
 			return err
 		} else if err = rows.Err(); err != nil {
 			return err
@@ -206,6 +217,13 @@ func (obj *Signatures) Load() error {
 			obj.Domain = NewDomain("")
 		}
 
+		if sel > 0 {
+			obj.Selector, _ = GetSelector(sel)
+		}
+		if obj.Selector == nil {
+			obj.Selector = NewSelector("")
+		}
+
 		logger.DebugLevel.Logf("Find row into table %s : %+v (id: %d)",
 			obj.table, obj.Message, obj.Id)
 	}
@@ -226,6 +244,7 @@ func (obj *Signatures) Save() error {
 	)
 
 	obj.Domain.Save()
+	obj.Selector.Save()
 
 	if obj.Id != 0 {
 		return obj.Update()
@@ -235,7 +254,7 @@ func (obj *Signatures) Save() error {
 		return fmt.Errorf("cannot add an empty row into table %s", obj.table)
 	}
 
-	res, err = GetDbCli().Exec(fmt.Sprintf("INSERT INTO `%s`(`message`,`domain`,`pass`,`error`) VALUES(?, ?, ?, ?)", obj.table), obj.Message.Id, obj.Domain.Id, obj.Pass, obj.Error)
+	res, err = GetDbCli().Exec(fmt.Sprintf("INSERT INTO `%s`(`message`,`domain`,`selector`,`pass`,`error`) VALUES(?, ?, ?, ?, ?)", obj.table), obj.Message.Id, obj.Domain.Id, obj.Selector.Id, obj.Pass, obj.Error)
 
 	if err != nil {
 		return err
@@ -284,6 +303,11 @@ func (obj *Signatures) Update() error {
 	if obj.Domain.Id != 0 {
 		sql = sql + ", `domain` = ? "
 		arg = append(arg, obj.Domain)
+	}
+
+	if obj.Selector.Id != 0 {
+		sql = sql + ", `selector` = ? "
+		arg = append(arg, obj.Selector)
 	}
 
 	if obj.Pass != 0 {
@@ -375,7 +399,7 @@ func (obj *Signatures) DeleteFromMessage() error {
 }
 
 func (obj Signatures) GetReport() report.ReportDKIM {
-	return report.GetReportDKIM(obj.Domain.Name, obj.GetPass())
+	return report.GetReportDKIM(obj.Domain.Name, obj.Selector.Name, obj.GetPass())
 }
 
 func (obj Signatures) GetPass() string {

@@ -113,6 +113,10 @@ func CheckTables() {
 		FatalLevel.LogErrorCtx(InfoLevel, fmt.Sprintf("checking table '%s' exists", table_domains), err)
 	}
 
+	if err := NewSelector("").CheckTable(); err != nil {
+		FatalLevel.LogErrorCtx(InfoLevel, fmt.Sprintf("checking table '%s' exists", table_selectors), err)
+	}
+
 	if err := NewIpAddr("").CheckTable(); err != nil {
 		FatalLevel.LogErrorCtx(InfoLevel, fmt.Sprintf("checking table '%s' exists", table_ipaddr), err)
 	}

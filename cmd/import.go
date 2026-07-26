@@ -228,9 +228,14 @@ func parseFile(wg *sync.WaitGroup, nbr, sub int, filepath string) {
 		case "dkim":
 			sig := database.NewSignatures(nil)
 			d := strings.SplitN(p[1], " ", 3)
+
 			sig.Domain = database.NewDomain(d[0])
 			err = sig.Domain.Load()
 			WarnLevel.LogErrorCtx(DebugLevel, fmt.Sprintf("loading value 'dkim domain' for job '%s'", j.JobId), err)
+
+			sig.Selector = database.NewSelector(d[1])
+			err = sig.Selector.Load()
+			WarnLevel.LogErrorCtx(DebugLevel, fmt.Sprintf("loading value 'dkim selector' for job '%s'", j.JobId), err)
 
 			if val, err = strconv.ParseInt(d[2], 10, 64); err != nil {
 				WarnLevel.LogErrorCtx(NilLevel, fmt.Sprintf("converting value 'dkim result' for job '%s'", j.JobId), err)
@@ -319,9 +324,11 @@ func parseFile(wg *sync.WaitGroup, nbr, sub int, filepath string) {
 			} else {
 				j.SPF = int(val)
 			}
+
 		case "arc":
 		case "arc_policy":
 			// Silent ignore
+
 		default:
 			ErrorLevel.LogErrorCtx(NilLevel, fmt.Sprintf("reading file '%s'", filepath), fmt.Errorf("key '%s' not understand", p[0]))
 		}

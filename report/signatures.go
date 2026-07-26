@@ -17,13 +17,15 @@ limitations under the License.
 */
 
 type ReportDKIM struct {
-	Domain string `xml:"domain"`
-	Result string `xml:"result"`
+	Domain   string `xml:"domain"`
+	Selector string `xml:"selector"`
+	Result   string `xml:"result"`
 }
 
-func GetReportDKIM(domain, result string) ReportDKIM {
+func GetReportDKIM(domain, selector, result string) ReportDKIM {
 	return ReportDKIM{
-		Domain: domain,
-		Result: result,
+		Domain:   domain,
+		Selector: selector,
+		Result:   result,
 	}
 }
