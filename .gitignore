@@ -18,3 +18,4 @@ build.sh
 *.sqlite3
 *.yaml
 *.log
+*.journal

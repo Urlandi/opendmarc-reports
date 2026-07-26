@@ -325,9 +325,8 @@ func parseFile(wg *sync.WaitGroup, nbr, sub int, filepath string) {
 				j.SPF = int(val)
 			}
 
-		case "arc":
-		case "arc_policy":
-			// Silent ignore
+		case "arc", "arc_policy":
+			DebugLevel.Logf("Found and ignored key '%s' parsing file '%s'", p[0], filepath)
 
 		default:
 			ErrorLevel.LogErrorCtx(NilLevel, fmt.Sprintf("reading file '%s'", filepath), fmt.Errorf("key '%s' not understand", p[0]))
