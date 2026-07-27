@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"sync"
 
 	"opendmarc-reports/config"
 	"opendmarc-reports/database"
@@ -45,15 +44,10 @@ and sent it by mail through SMTP server.
 		lst, err := database.GetDomainList(false, config.GetConfig().IsDayMode(), config.GetConfig().GetInterval())
 		FatalLevel.LogErrorCtx(NilLevel, "retrieve domain list to generate report", err)
 
-		var wg sync.WaitGroup
-
-		for _, dom := range lst {
-			wg.Add(1)
-			go GoRunDomain(&wg, dom)
-		}
-
 		DebugLevel.Logf("Waiting all threads finish...")
-		wg.Wait()
+		for _, dom := range lst {
+			GoRunDomain(dom)
+		}
 		DebugLevel.Logf("All threads has finished")
 	},
 	Args: cobra.NoArgs,
@@ -73,12 +67,8 @@ func init() {
 	// configCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func GoRunDomain(wg *sync.WaitGroup, id int) {
-	//	var swg sync.WaitGroup
+func GoRunDomain(id int) {
 	defer func() {
-		if wg != nil {
-			wg.Done()
-		}
 		if r := recover(); r != nil {
 			InfoLevel.Logf("Recover Panic Value : %v", r)
 			return
@@ -93,16 +83,12 @@ func GoRunDomain(wg *sync.WaitGroup, id int) {
 	FatalLevel.LogErrorCtx(NilLevel, fmt.Sprintf("retrieve request list for domain '%s' (Id : %d) to generate report", dom.Name, dom.Id), err)
 
 	for _, req := range lst {
-		wg.Add(1)
-		go GoRunRequest(wg, req)
+		GoRunRequest(req)
 	}
 }
 
-func GoRunRequest(wg *sync.WaitGroup, id int) {
+func GoRunRequest(id int) {
 	defer func() {
-		if wg != nil {
-			wg.Done()
-		}
 		if r := recover(); r != nil {
 			InfoLevel.Logf("Recover Panic Value : %v", r)
 			return
